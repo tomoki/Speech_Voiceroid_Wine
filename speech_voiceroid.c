@@ -6,7 +6,16 @@
 #include <string.h>
 #include <stdbool.h>
 
-const char* yukari = "VOICEROIDÅ{ åãåéÇ‰Ç©ÇË";
+#define SPEAKERS_SIZE 2
+char SPEAKERS[SPEAKERS_SIZE][300] = {
+    "yukari",
+    "maki"
+};
+
+char WINDOW_NAME[SPEAKERS_SIZE][300] = {
+    "VOICEROIDÅ{ åãåéÇ‰Ç©ÇË",
+    "VOICEROIDÅ{ ñØà¿Ç∆Ç‡Ç¶",
+};
 
 // http://onishi-lab.jp/programming/clip_win.html
 // TODO: GlobalFree.
@@ -76,11 +85,27 @@ UINT send_key_with_ctrl(short key){
 int main(int argc, char**argv){
     if(argc != 3){
         printf("Usage: speech_voiceroid.exe yukari \"Hello World\"\n");
+        for(int i=0;i<SPEAKERS_SIZE;i++){
+            printf(" %s\t=> %s \n", SPEAKERS[i], WINDOW_NAME[i]);
+        }
         return 1;
     }
     const char* speaker = argv[1];
     const char* message = argv[2];
-    const char* appname = yukari; // TODO: change to variable
+    char* appname = "";
+    for(int i=0;i<SPEAKERS_SIZE;i++){
+        if(strcmp(SPEAKERS[i], speaker) == 0){
+            appname = WINDOW_NAME[i];
+        }
+    }
+    if(strlen(appname) == 0){
+        printf("Can't find %s\n", speaker);
+        printf("Usable speakers are followings:\n");
+        for(int i=0;i<SPEAKERS_SIZE;i++){
+            printf(" %s\t=> %s \n", SPEAKERS[i], WINDOW_NAME[i]);
+        }
+        return 1;
+    }
 
     const HWND win = FindWindow(NULL, appname);
     if(win == NULL){
