@@ -1,7 +1,8 @@
-CXX=x86_64-w64-mingw32-g++
+# C++ does not work well on Wine.
+CXX=i686-w64-mingw32-gcc
 PROG=speech_voiceroid.exe
-CPPF=speech_voiceroid.cpp
-CFLAGS=-O2 -Wall -std=c++11
+CPPF=speech_voiceroid.c
+CFLAGS=-O2 -Wall -std=c99
 
 all: $(PROG)
 
