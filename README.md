@@ -4,7 +4,7 @@ This provide very simple script for automating "press speak button" in Voiceroid
 ```
 # if you want to compile
 # make
-speech_voiceroid.exe "ゆかりさん愛してる"
+speech_voiceroid.exe yukari "ゆかりさん愛してる"
 ```
 
 # Motivation
