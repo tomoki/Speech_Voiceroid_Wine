@@ -6,7 +6,9 @@
 #include <string.h>
 #include <stdbool.h>
 
+const char* SAVE_WIN_NAME = "音声ファイルの保存";
 #define SPEAKERS_SIZE 2
+
 char SPEAKERS[SPEAKERS_SIZE][300] = {
     "yukari",
     "maki"
@@ -82,9 +84,123 @@ UINT send_key_with_ctrl(short key){
     return SendInput(4, e, sizeof(INPUT));
 }
 
+/* #define IsWindowOwner(h)    (GetWindow(h,GW_OWNER) == NULL) */
+HWND traverse_windows(HWND root, UINT* path, size_t path_length){
+    HWND cur = root;
+    for(size_t i=0;i<path_length; i++){
+        cur = GetWindow(cur, path[i]);
+
+        /* For debugging */
+        /* TCHAR   szTitle[ 1024 ]; */
+        /* TCHAR   szClass[ 1024 ]; */
+        /* GetWindowText( cur, szTitle, sizeof(szTitle) );    // キャプションの取得 */
+        /* GetClassName(  cur, szClass, sizeof(szClass) );    // クラス文字列の取得 */
+        /* // 列挙ウインドウの表示 */
+        /* printf( TEXT("%4d: %c %c %c %c %c %c %c [%-50s] [%s]\n"), */
+        /*         i,                                       // 列挙番号 */
+        /*         IsWindowOwner(cur)   ? 'O' : '_',              // Ownerウインドウ */
+        /*         IsWindowUnicode(cur) ? 'U' : '_',              // Unicodeタイプ */
+        /*         IsWindowVisible(cur) ? 'V' : '_',              // 可視状態 */
+        /*         IsWindowEnabled(cur) ? 'E' : '_',              // 有効状態 */
+        /*         IsIconic(cur)        ? 'I' : '_',              // 最小化状態 */
+        /*         IsZoomed(cur)        ? 'Z' : '_',              // 最大化状態 */
+        /*         IsWindow(cur)        ? 'W' : '_',              // ウインドウ有無 */
+        /*         szClass,                                        // クラス文字列 */
+        /*         szTitle );                                      // キャプション */
+        /* printf("%x\n", cur); */
+
+        if(cur == NULL){
+            printf("Can't find handle %d\n", i);
+            exit(1);
+        }
+    }
+    return cur;
+}
+
+// may take a while.
+// path is windows-style like c:\home\users\wine\a.wav
+boolean save_to_file_wine(HWND win, char* path){
+    UINT path_for_save_button[] = {
+        GW_CHILD,
+        GW_HWNDNEXT, GW_HWNDNEXT, GW_HWNDNEXT, GW_HWNDNEXT, GW_HWNDNEXT,
+        GW_HWNDNEXT, GW_HWNDNEXT, GW_HWNDNEXT, GW_HWNDNEXT, GW_HWNDNEXT,
+    };
+    UINT path_for_edit[] = {
+        GW_CHILD,
+        GW_HWNDNEXT, GW_HWNDNEXT, GW_HWNDNEXT, GW_HWNDNEXT,
+        GW_HWNDNEXT, GW_HWNDNEXT,
+        GW_CHILD, GW_CHILD,
+    };
+
+    const HWND save = traverse_windows(win, path_for_save_button,
+                                       sizeof(path_for_save_button)/sizeof(UINT));
+    const HWND edit = traverse_windows(win, path_for_edit,
+                                       sizeof(path_for_edit)/sizeof(UINT));
+
+    SendMessage(edit, WM_SETTEXT, 0, path);
+    SendMessage(save, BM_CLICK,   0, 0);
+    Sleep(300);
+
+    // TODO: works for alert...
+    /* UINT path_for_overwrite_alert[] = { */
+    /*     GW_CHILD, GW_HWDLAST */
+    /* }; */
+    /* const HWND over_alert = traverse_windows(win, path_for_overwrite_alert, */
+    /*                                     sizeof(path_for_overwrite_alert)/sizeof(UINT)); */
+    /* if(over_alert != NULL){ */
+    /*     UINT path_for_overwrite_yes[] = { */
+    /*         GW_CHILD,  GW_HWNDNEXT, GW_HWNDNEXT */
+    /*     }; */
+    /*     const HWND yes_button = traverse_windows(over_alert, path_for_overwrite_yes, */
+    /*                                              sizeof(path_for_overwrite_yes)/sizeof(UINT)); */
+    /*     SendMessage(save, BM_CLICK, 0, 0); */
+    /* } */
+}
+
+
+
+// Yukari ----------------------------------------------------------------------
+void paste_text_yukari(char* message){
+    copy_to_clipboard(message);
+    send_key_with_ctrl(VK_OEM_2); // Ctrl+'/' to select all
+    send_key(VK_DELETE);          // Delete
+    send_key_with_ctrl('V');      // Paste
+}
+
+void speak_voiceroid_yukari(HWND win, char* message){
+    UINT search_path_for_play_button[] = {
+        GW_CHILD,    GW_CHILD,    GW_HWNDNEXT,
+        GW_CHILD,    GW_HWNDNEXT, GW_HWNDNEXT,
+        GW_HWNDNEXT, GW_HWNDNEXT
+    };
+
+    const HWND play_button = traverse_windows(win, search_path_for_play_button,
+                                              sizeof(search_path_for_play_button)/sizeof(UINT));
+
+    paste_text_yukari(message);
+    Sleep(10);
+    SendMessage(play_button, 0, 0, 0); // I don't know why 0...
+}
+
+void save_voiceroid_yukari(HWND win, char* message, char* path){
+    UINT search_path_for_save_button[] = {
+        GW_CHILD,    GW_CHILD,    GW_HWNDNEXT,
+        GW_CHILD,    GW_HWNDNEXT, GW_HWNDNEXT
+    };
+    const HWND save_button = traverse_windows(win, search_path_for_save_button,
+                                              sizeof(search_path_for_save_button)/sizeof(UINT));
+    paste_text_yukari(message);
+    Sleep(10);
+    PostMessage(save_button, 0, 0, 0);
+    Sleep(100);
+    const HWND save_window = FindWindow(NULL, SAVE_WIN_NAME);
+    save_to_file_wine(save_window, path);
+}
+// -----------------------------------------------------------------------------
+
 int main(int argc, char**argv){
-    if(argc != 3){
-        printf("Usage: speech_voiceroid.exe yukari \"Hello World\"\n");
+    if(argc < 3){
+        printf("Usage: speech_voiceroid.exe yukari \"Hello World\" [path] \n");
         for(int i=0;i<SPEAKERS_SIZE;i++){
             printf(" %s\t=> %s \n", SPEAKERS[i], WINDOW_NAME[i]);
         }
@@ -113,34 +229,17 @@ int main(int argc, char**argv){
         return 1;
     }
 
-    UINT search_path[] = {
-        GW_CHILD,    GW_CHILD,    GW_HWNDNEXT,
-        GW_CHILD,    GW_HWNDNEXT, GW_HWNDNEXT,
-        GW_HWNDNEXT, GW_HWNDNEXT
-    };
-    HWND cur = win;
-    for(size_t i=0;i<(sizeof(search_path)/sizeof(UINT)); i++){
-        cur = GetWindow(cur, search_path[i]);
-        if(cur == NULL){
-            printf("Can't find handle %d\n", (i-1));
-            return 1;
-        }
-    }
-    const HWND play_button = cur;
-
-    // take window foreground.
+    /* // take window foreground. */
     ShowWindow(win, SW_SHOWNORMAL);
     SetForegroundWindow(win);
-
     Sleep(10);
 
-    copy_to_clipboard(message);
-    send_key_with_ctrl(VK_OEM_2); // Ctrl+'/' to select all
-    send_key(VK_DELETE);          // Delete
-    send_key_with_ctrl('V');      // Paste
-
-    Sleep(10);
-    SendMessage(play_button, 0, 0, 0); // press play.
+    if(argc >= 4){
+        const char* path = argv[3];
+        save_voiceroid_yukari(win, message, path);
+    }else{
+        speak_voiceroid_yukari(win, message);
+    }
 
     return 0;
 }
