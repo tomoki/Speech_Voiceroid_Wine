@@ -234,11 +234,14 @@ int main(int argc, char**argv){
     SetForegroundWindow(win);
     Sleep(10);
 
-    if(argc >= 4){
-        const char* path = argv[3];
-        save_voiceroid_yukari(win, message, path);
-    }else{
-        speak_voiceroid_yukari(win, message);
+    if(strcmp(speaker, "yukari") == 0 ||
+       strcmp(speaker, "maki") == 0){
+        if(argc >= 4){
+            const char* path = argv[3];
+            save_voiceroid_yukari(win, message, path);
+        }else{
+            speak_voiceroid_yukari(win, message);
+        }
     }
 
     return 0;
