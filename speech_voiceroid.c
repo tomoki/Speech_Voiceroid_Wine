@@ -23,10 +23,19 @@ char WINDOW_NAME[SPEAKERS_SIZE][300] = {
 // TODO: GlobalFree.
 boolean copy_to_clipboard(const char* str){
     char* mem = GlobalAlloc(GMEM_MOVEABLE, strlen(str));
-    if(mem == NULL) return false;
+    if(mem == NULL) {
+        printf("Failed to GlobalAlloc in copy_to_clipboard\n");
+        return false;
+    }
 
     char* shared = (char*) GlobalLock(mem);
-    if(!shared) return false;
+    // It is insane, but if you delete following printf, program does not work if
+    // "exec_yukari_and_server_nohead.sh ¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿X¿¿¿¿¿¿¿¿¿¿¿" is input.
+    printf("%s\n", shared);
+    if(!shared) {
+        printf("Failed to GlobalLock in copy_to_clipboard\n");
+        return false;
+    }
     strcpy(shared, str);
     GlobalUnlock(shared);
 
@@ -36,6 +45,7 @@ boolean copy_to_clipboard(const char* str){
         CloseClipboard();
         return true;
     }else{
+        printf("Failed to OpenClipboard in copy_to_clipboard\n");
         return false;
     }
 }
@@ -139,7 +149,7 @@ boolean save_to_file_wine(HWND win, char* path){
 
     SendMessage(edit, WM_SETTEXT, 0, path);
     SendMessage(save, BM_CLICK,   0, 0);
-    Sleep(300);
+    Sleep(2500);
 
     // TODO: works for alert...
     /* UINT path_for_overwrite_alert[] = { */
@@ -161,7 +171,9 @@ boolean save_to_file_wine(HWND win, char* path){
 
 // Yukari ----------------------------------------------------------------------
 void paste_text_yukari(char* message){
-    copy_to_clipboard(message);
+    if(copy_to_clipboard(message) == false){
+        printf("Failed to copy message to clipboard\n");
+    }
     send_key_with_ctrl(VK_OEM_2); // Ctrl+'/' to select all
     send_key(VK_DELETE);          // Delete
     send_key_with_ctrl('V');      // Paste
