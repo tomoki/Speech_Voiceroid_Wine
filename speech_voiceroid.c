@@ -22,16 +22,13 @@ char WINDOW_NAME[SPEAKERS_SIZE][300] = {
 // http://onishi-lab.jp/programming/clip_win.html
 // TODO: GlobalFree.
 boolean copy_to_clipboard(const char* str){
-    char* mem = GlobalAlloc(GMEM_MOVEABLE, strlen(str));
+    char* mem = GlobalAlloc(GMEM_MOVEABLE, strlen(str)+1);
     if(mem == NULL) {
         printf("Failed to GlobalAlloc in copy_to_clipboard\n");
         return false;
     }
 
     char* shared = (char*) GlobalLock(mem);
-    // It is insane, but if you delete following printf, program does not work if
-    // "exec_yukari_and_server_nohead.sh ¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿¿X¿¿¿¿¿¿¿¿¿¿¿" is input.
-    printf("%s\n", shared);
     if(!shared) {
         printf("Failed to GlobalLock in copy_to_clipboard\n");
         return false;
